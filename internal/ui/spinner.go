@@ -1,3 +1,4 @@
+// UI包
 package ui
 
 import (
@@ -8,13 +9,15 @@ import (
 	"github.com/fatih/color"
 )
 
-// SpinnerConfig defines spinner configuration
+// SpinnerConfig 定义旋转器的配置
 type SpinnerConfig struct {
-	Frames []string        // Animation frames for the spinner
-	Delay  time.Duration   // Delay between frame updates
+	// 旋转器动画帧
+	Frames []string
+	// 帧更新之间的延迟
+	Delay  time.Duration
 }
 
-// DefaultSpinnerConfig returns the default spinner configuration
+// DefaultSpinnerConfig 返回默认旋转器配置
 func DefaultSpinnerConfig() *SpinnerConfig {
 	return &SpinnerConfig{
 		Frames: []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"},
@@ -22,17 +25,23 @@ func DefaultSpinnerConfig() *SpinnerConfig {
 	}
 }
 
-// Spinner represents a progress spinner
+// Spinner 表示一个进度旋转器
 type Spinner struct {
+	// 配置信息
 	config  *SpinnerConfig
+	// 显示的消息
 	message string
+	// 当前帧索引
 	current int
+	// 是否处于活动状态
 	active  bool
+	// 停止信号通道
 	stopCh  chan struct{}
+	// 同步互斥锁
 	mu      sync.RWMutex
 }
 
-// NewSpinner creates a new spinner with the given configuration
+// NewSpinner 创建一个具有给定配置的新旋转器
 func NewSpinner(config *SpinnerConfig) *Spinner {
 	if config == nil {
 		config = DefaultSpinnerConfig()
@@ -43,25 +52,25 @@ func NewSpinner(config *SpinnerConfig) *Spinner {
 	}
 }
 
-// State management
+// 状态管理
 
-// SetMessage sets the spinner message
+// SetMessage 设置旋转器消息
 func (s *Spinner) SetMessage(message string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.message = message
 }
 
-// IsActive returns whether the spinner is currently active
+// IsActive 返回旋转器当前是否处于活动状态
 func (s *Spinner) IsActive() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.active
 }
 
-// Control methods
+// 控制方法
 
-// Start begins the spinner animation
+// Start 开始旋转器动画
 func (s *Spinner) Start() {
 	s.mu.Lock()
 	if s.active {
@@ -74,7 +83,7 @@ func (s *Spinner) Start() {
 	go s.run()
 }
 
-// Stop halts the spinner animation
+// Stop 停止旋转器动画
 func (s *Spinner) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -86,11 +95,12 @@ func (s *Spinner) Stop() {
 	s.active = false
 	close(s.stopCh)
 	s.stopCh = make(chan struct{})
-	fmt.Print("\r") // Clear the spinner line
+	fmt.Print("\r") // 清除旋转器行
 }
 
-// Internal methods
+// 内部方法
 
+// run 运行旋转器动画循环
 func (s *Spinner) run() {
 	ticker := time.NewTicker(s.config.Delay)
 	defer ticker.Stop()
@@ -98,7 +108,7 @@ func (s *Spinner) run() {
 	cyan := color.New(color.FgCyan, color.Bold)
 	message := s.message
 
-	// Print initial state
+	// 打印初始状态
 	fmt.Printf("\r %s %s", cyan.Sprint(s.config.Frames[0]), message)
 
 	for {
@@ -116,7 +126,7 @@ func (s *Spinner) run() {
 			s.mu.RUnlock()
 
 			fmt.Printf("\r %s", cyan.Sprint(frame))
-			fmt.Printf("\033[%dG%s", 4, message) // Move cursor and print message
+			fmt.Printf("\033[%dG%s", 4, message) // 移动光标并打印消息
 		}
 	}
 }

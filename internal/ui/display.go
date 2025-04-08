@@ -1,3 +1,4 @@
+// UI包，提供用户界面相关功能
 package ui
 
 import (
@@ -10,12 +11,13 @@ import (
 	"github.com/fatih/color"
 )
 
-// Display handles UI operations for terminal output
+// Display 处理终端输出的UI操作
 type Display struct {
+	// 进度旋转器
 	spinner *Spinner
 }
 
-// NewDisplay creates a new display instance with an optional spinner
+// NewDisplay 创建一个新的显示实例，可选提供旋转器
 func NewDisplay(spinner *Spinner) *Display {
 	if spinner == nil {
 		spinner = NewSpinner(nil)
@@ -23,9 +25,9 @@ func NewDisplay(spinner *Spinner) *Display {
 	return &Display{spinner: spinner}
 }
 
-// Terminal Operations
+// 终端操作
 
-// ClearScreen clears the terminal screen based on OS
+// ClearScreen 根据操作系统清除终端屏幕
 func (d *Display) ClearScreen() error {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
@@ -38,22 +40,22 @@ func (d *Display) ClearScreen() error {
 	return cmd.Run()
 }
 
-// Progress Indicator
+// 进度指示器
 
-// ShowProgress displays a progress message with a spinner
+// ShowProgress 显示带有旋转器的进度消息
 func (d *Display) ShowProgress(message string) {
 	d.spinner.SetMessage(message)
 	d.spinner.Start()
 }
 
-// StopProgress stops the progress spinner
+// StopProgress 停止进度旋转器
 func (d *Display) StopProgress() {
 	d.spinner.Stop()
 }
 
-// Message Display
+// 消息显示
 
-// ShowSuccess displays success messages in green
+// ShowSuccess 以绿色显示成功消息
 func (d *Display) ShowSuccess(messages ...string) {
 	green := color.New(color.FgGreen)
 	for _, msg := range messages {
@@ -61,28 +63,28 @@ func (d *Display) ShowSuccess(messages ...string) {
 	}
 }
 
-// ShowInfo displays an info message in cyan
+// ShowInfo 以青色显示信息消息
 func (d *Display) ShowInfo(message string) {
 	cyan := color.New(color.FgCyan)
 	cyan.Println(message)
 }
 
-// ShowError displays an error message in red
+// ShowError 以红色显示错误消息
 func (d *Display) ShowError(message string) {
 	red := color.New(color.FgRed)
 	red.Println(message)
 }
 
-// ShowPrivilegeError displays privilege error messages with instructions
+// ShowPrivilegeError 显示权限错误消息及操作指导
 func (d *Display) ShowPrivilegeError(messages ...string) {
 	red := color.New(color.FgRed, color.Bold)
 	yellow := color.New(color.FgYellow)
 
-	// Main error message
+	// 主要错误消息
 	red.Println(messages[0])
 	fmt.Println()
 
-	// Additional instructions
+	// 附加指导说明
 	for _, msg := range messages[1:] {
 		if strings.Contains(msg, "%s") {
 			exe, _ := os.Executable()
@@ -91,4 +93,9 @@ func (d *Display) ShowPrivilegeError(messages ...string) {
 			yellow.Println(msg)
 		}
 	}
+}
+
+// ShowLogo 显示应用程序的Logo
+func (d *Display) ShowLogo() {
+	fmt.Println(GetLogo())
 }

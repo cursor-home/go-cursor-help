@@ -1,3 +1,4 @@
+// 进程包，负责处理与操作系统进程相关的操作
 package process
 
 import (
@@ -10,37 +11,42 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Config holds process manager configuration
+// Config 保存进程管理器的配置
 type Config struct {
-	MaxAttempts     int           // Maximum number of attempts to kill processes
-	RetryDelay      time.Duration // Delay between retry attempts
-	ProcessPatterns []string      // Process names to look for
+	// 终止进程的最大尝试次数
+	MaxAttempts     int           
+	// 重试之间的延迟时间
+	RetryDelay      time.Duration 
+	// 要查找的进程名称模式
+	ProcessPatterns []string      
 }
 
-// DefaultConfig returns the default configuration
+// DefaultConfig 返回默认配置
 func DefaultConfig() *Config {
 	return &Config{
 		MaxAttempts: 3,
 		RetryDelay:  2 * time.Second,
 		ProcessPatterns: []string{
-			"Cursor.exe", // Windows executable
-			"Cursor ",    // Linux/macOS executable with space
-			"cursor ",    // Linux/macOS executable lowercase with space
-			"cursor",     // Linux/macOS executable lowercase
-			"Cursor",     // Linux/macOS executable
-			"*cursor*",   // Any process containing cursor
-			"*Cursor*",   // Any process containing Cursor
+			"Cursor.exe", // Windows可执行文件
+			"Cursor ",    // Linux/macOS可执行文件，带空格
+			"cursor ",    // Linux/macOS可执行文件，小写带空格
+			"cursor",     // Linux/macOS可执行文件，小写
+			"Cursor",     // Linux/macOS可执行文件
+			"*cursor*",   // 任何包含cursor的进程
+			"*Cursor*",   // 任何包含Cursor的进程
 		},
 	}
 }
 
-// Manager handles process-related operations
+// Manager 处理进程相关操作的管理器
 type Manager struct {
+	// 配置信息
 	config *Config
+	// 日志记录器
 	log    *logrus.Logger
 }
 
-// NewManager creates a new process manager with optional config and logger
+// NewManager 创建一个新的进程管理器，可选配置和日志记录器
 func NewManager(config *Config, log *logrus.Logger) *Manager {
 	if config == nil {
 		config = DefaultConfig()
@@ -54,7 +60,7 @@ func NewManager(config *Config, log *logrus.Logger) *Manager {
 	}
 }
 
-// IsCursorRunning checks if any Cursor process is currently running
+// IsCursorRunning 检查是否有Cursor进程当前正在运行
 func (m *Manager) IsCursorRunning() bool {
 	processes, err := m.getCursorProcesses()
 	if err != nil {
@@ -64,7 +70,7 @@ func (m *Manager) IsCursorRunning() bool {
 	return len(processes) > 0
 }
 
-// KillCursorProcesses attempts to kill all running Cursor processes
+// KillCursorProcesses 尝试终止所有运行中的Cursor进程
 func (m *Manager) KillCursorProcesses() error {
 	for attempt := 1; attempt <= m.config.MaxAttempts; attempt++ {
 		processes, err := m.getCursorProcesses()
@@ -76,7 +82,7 @@ func (m *Manager) KillCursorProcesses() error {
 			return nil
 		}
 
-		// Try graceful shutdown first on Windows
+		// 在Windows上先尝试优雅关闭
 		if runtime.GOOS == "windows" {
 			for _, pid := range processes {
 				exec.Command("taskkill", "/PID", pid).Run()
@@ -84,7 +90,7 @@ func (m *Manager) KillCursorProcesses() error {
 			}
 		}
 
-		// Force kill remaining processes
+		// 强制终止剩余进程
 		remainingProcesses, _ := m.getCursorProcesses()
 		for _, pid := range remainingProcesses {
 			m.killProcess(pid)
@@ -100,7 +106,7 @@ func (m *Manager) KillCursorProcesses() error {
 	return nil
 }
 
-// getCursorProcesses returns PIDs of running Cursor processes
+// getCursorProcesses 返回运行中的Cursor进程的PID列表
 func (m *Manager) getCursorProcesses() ([]string, error) {
 	cmd := m.getProcessListCommand()
 	if cmd == nil {
@@ -115,7 +121,7 @@ func (m *Manager) getCursorProcesses() ([]string, error) {
 	return m.parseProcessList(string(output)), nil
 }
 
-// getProcessListCommand returns the appropriate command to list processes based on OS
+// getProcessListCommand 根据操作系统返回适当的列出进程的命令
 func (m *Manager) getProcessListCommand() *exec.Cmd {
 	switch runtime.GOOS {
 	case "windows":
@@ -129,12 +135,13 @@ func (m *Manager) getProcessListCommand() *exec.Cmd {
 	}
 }
 
-// parseProcessList extracts Cursor process PIDs from process list output
+// parseProcessList 从进程列表输出中提取Cursor进程的PID
 func (m *Manager) parseProcessList(output string) []string {
 	var processes []string
 	for _, line := range strings.Split(output, "\n") {
 		lowerLine := strings.ToLower(line)
 
+		// 忽略自身进程
 		if m.isOwnProcess(lowerLine) {
 			continue
 		}
@@ -146,13 +153,13 @@ func (m *Manager) parseProcessList(output string) []string {
 	return processes
 }
 
-// isOwnProcess checks if the process belongs to this application
+// isOwnProcess 检查进程是否属于本应用程序
 func (m *Manager) isOwnProcess(line string) bool {
 	return strings.Contains(line, "cursor-id-modifier") ||
 		strings.Contains(line, "cursor-helper")
 }
 
-// findCursorProcess checks if a process line matches Cursor patterns and returns its PID
+// findCursorProcess 检查进程行是否匹配Cursor模式并返回其PID
 func (m *Manager) findCursorProcess(line, lowerLine string) string {
 	for _, pattern := range m.config.ProcessPatterns {
 		if m.matchPattern(lowerLine, strings.ToLower(pattern)) {
@@ -162,22 +169,26 @@ func (m *Manager) findCursorProcess(line, lowerLine string) string {
 	return ""
 }
 
-// matchPattern checks if a line matches a pattern, supporting wildcards
+// matchPattern 检查一行是否匹配模式，支持通配符
 func (m *Manager) matchPattern(line, pattern string) bool {
 	switch {
 	case strings.HasPrefix(pattern, "*") && strings.HasSuffix(pattern, "*"):
+		// *text* 模式：包含text
 		search := pattern[1 : len(pattern)-1]
 		return strings.Contains(line, search)
 	case strings.HasPrefix(pattern, "*"):
+		// *text 模式：以text结尾
 		return strings.HasSuffix(line, pattern[1:])
 	case strings.HasSuffix(pattern, "*"):
+		// text* 模式：以text开头
 		return strings.HasPrefix(line, pattern[:len(pattern)-1])
 	default:
+		// text 模式：完全匹配
 		return line == pattern
 	}
 }
 
-// extractPID extracts process ID from a process list line based on OS format
+// extractPID 根据操作系统格式从进程列表行中提取进程ID
 func (m *Manager) extractPID(line string) string {
 	switch runtime.GOOS {
 	case "windows":
@@ -194,7 +205,7 @@ func (m *Manager) extractPID(line string) string {
 	return ""
 }
 
-// killProcess forcefully terminates a process by PID
+// killProcess 通过PID强制终止进程
 func (m *Manager) killProcess(pid string) error {
 	cmd := m.getKillCommand(pid)
 	if cmd == nil {
@@ -203,7 +214,7 @@ func (m *Manager) killProcess(pid string) error {
 	return cmd.Run()
 }
 
-// getKillCommand returns the appropriate command to kill a process based on OS
+// getKillCommand 根据操作系统返回适当的终止进程的命令
 func (m *Manager) getKillCommand(pid string) *exec.Cmd {
 	switch runtime.GOOS {
 	case "windows":

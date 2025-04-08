@@ -1,9 +1,11 @@
+// UI包
 package ui
 
 import (
 	"github.com/fatih/color"
 )
 
+// Cursor应用程序的ASCII艺术Logo
 const cyberpunkLogo = `
    ██████╗██╗   ██╗██████╗ ███████╗ ██████╗ ██████╗ 
   ██╔════╝██║   ██║██╔══██╗██╔════╝██╔═══██╗██╔══██╗
@@ -13,8 +15,7 @@ const cyberpunkLogo = `
    ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝  ╚═╝
 `
 
-// ShowLogo displays the application logo
-func (d *Display) ShowLogo() {
-	cyan := color.New(color.FgCyan, color.Bold)
-	cyan.Println(cyberpunkLogo)
+// GetLogo 返回应用程序的Logo字符串
+func GetLogo() string {
+	return cyberpunkLogo
 }
